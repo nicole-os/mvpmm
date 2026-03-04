@@ -940,7 +940,11 @@ class WebsiteScanner {
 
         // Helper to render a messaging blurb card for any site
         const renderBlurb = (site, isYours = false) => {
-            if (site.status !== 'success' && !isYours) return '';
+            // Show card if: it's your site, OR competitor has any data (success, requires-javascript, etc)
+            const hasData = site.page_messaging || site.seo_factors;
+            if (!isYours && site.status === 'error' && !hasData) return '';
+            if (!isYours && site.status === 'blocked' && !hasData) return '';
+            if (!isYours && site.status === 'timeout' && !hasData) return '';
             const msg = site.page_messaging || {};
             const seo = site.seo_factors || {};
             const domain = isYours ? (site.domain || site.url || 'Your Site') : (site.domain || site.url || 'Competitor');
