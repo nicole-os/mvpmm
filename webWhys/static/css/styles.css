@@ -674,7 +674,7 @@ textarea::placeholder {
 /* Priority Grid — 2 columns × 3 rows (responsive) */
 .priority-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: 20px;
     margin-top: var(--spacing-lg);
     margin-right: auto;
@@ -683,11 +683,7 @@ textarea::placeholder {
     width: 100%;
 }
 
-@media (max-width: 1200px) {
-    .priority-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
+/* Responsive grid handled by auto-fit, no manual breakpoint needed */
 
 /* Priority Card */
 .priority-card {

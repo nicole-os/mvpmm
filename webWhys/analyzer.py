@@ -65,6 +65,12 @@ Main Content: {content.get('main_content', '')[:800]}
 """
 
         try:
+            api_key_preview = os.getenv("OPENAI_API_KEY", "NOT_SET")
+            api_key_preview = f"{api_key_preview[:10]}..." if len(api_key_preview) > 10 else api_key_preview
+            print(f"[LLM] Calling {self.model} for apparent audience inference")
+            print(f"[LLM] API Key present: {bool(os.getenv('OPENAI_API_KEY'))}")
+            print(f"[LLM] API Key preview: {api_key_preview}")
+
             response = await litellm.acompletion(
                 model=self.model,
                 messages=[
@@ -77,9 +83,10 @@ Main Content: {content.get('main_content', '')[:800]}
                         "content": f"Who is the intended audience for this product/service? Answer with only 1-3 words describing the person type, role, or organization (e.g., 'Enterprise security teams' or 'Small business owners'):\n\nTitle: {context.split('Title: ')[1].split(chr(10))[0] if 'Title: ' in context else 'N/A'}\nKey info: {context[:300]}"
                     }
                 ],
-                temperature=0.2,  # Very low temperature for deterministic output
+                temperature=0.0,  # Deterministic output - no variability
                 max_tokens=20
             )
+            print(f"[LLM] ✅ Apparent audience inference succeeded: {response.choices[0].message.content.strip()}")
 
             inferred = response.choices[0].message.content.strip()
             print(f"[DEBUG] Raw LLM response for audience: '{inferred}'")
@@ -321,6 +328,12 @@ Main Content: {content.get('main_content', '')[:800]}
         )
 
         try:
+            api_key_preview = os.getenv("OPENAI_API_KEY", "NOT_SET")
+            api_key_preview = f"{api_key_preview[:10]}..." if len(api_key_preview) > 10 else api_key_preview
+            print(f"[LLM] Calling {self.model} for recommendations")
+            print(f"[LLM] API Key present: {bool(os.getenv('OPENAI_API_KEY'))}")
+            print(f"[LLM] API Key preview: {api_key_preview}")
+
             response = await litellm.acompletion(
                 model=self.model,
                 messages=[
@@ -349,6 +362,7 @@ Your recommendations must follow these rules without exception:
             )
 
             result = json.loads(response.choices[0].message.content)
+            print(f"[LLM] ✅ Recommendations generation succeeded: {len(result.get('recommendations', []))} recommendations")
             return {
                 "recommendations": result.get("recommendations", []),
                 "copy_suggestions": result.get("copy_suggestions", [])

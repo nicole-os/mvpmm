@@ -23,12 +23,14 @@ Extracts and analyzes website content for SEO/GEO/LLM discoverability assessment
 
 import asyncio
 import re
+import os
 from urllib.parse import urlparse, urljoin
 from typing import Optional
 import aiohttp
 from bs4 import BeautifulSoup
 from readability import Document
 import tldextract
+import litellm
 
 
 class WebsiteScraper:
@@ -37,7 +39,14 @@ class WebsiteScraper:
     def __init__(self, timeout: int = 30):
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; WebsiteAnalyzer/1.0; +https://example.com/bot)",
+            # Use realistic browser User-Agent to avoid WAF/bot detection blocks
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
             # Consent mode headers to signal pre-consent state (like Google does)
             "Sec-GPC": "1",  # Global Privacy Control
             "Cookie": "consent_state=pre-consent"  # Signal we're in pre-consent state
@@ -68,12 +77,27 @@ class WebsiteScraper:
         }
 
         try:
-            async with aiohttp.ClientSession(timeout=self.timeout, headers=self.headers) as session:
-                # Fetch main page
-                async with session.get(url, allow_redirects=True) as response:
-                    result["http_status"] = response.status
-                    result["final_url"] = str(response.url)
-                    html = await response.text()
+            # Configure TCP connector with larger header limits
+            connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
+            async with aiohttp.ClientSession(
+                timeout=self.timeout,
+                headers=self.headers,
+                connector=connector,
+                read_bufsize=2**16
+            ) as session:
+                try:
+                    # Fetch main page
+                    async with session.get(url, allow_redirects=True) as response:
+                        result["http_status"] = response.status
+                        result["final_url"] = str(response.url)
+                        html = await response.text()
+                except ValueError as e:
+                    # Handle "got more than 8190 bytes when reading header" error
+                    if "header value is too long" in str(e).lower() or "8190 bytes" in str(e):
+                        result["status"] = "error"
+                        result["error"] = f"Server response headers are oversized. This site may have excessive cookies or headers. {str(e)}"
+                        return result
+                    raise
 
                 soup = BeautifulSoup(html, "lxml")
                 doc = Document(html)
@@ -118,7 +142,7 @@ class WebsiteScraper:
                 # Generate alt text suggestions if there are images without alt text
                 images_needing_alt = result["seo_factors"].pop("images_needing_alt", [])
                 if images_needing_alt:
-                    result["alt_text_suggestions"] = self._generate_alt_suggestions(soup, images_needing_alt)
+                    result["alt_text_suggestions"] = await self._generate_alt_suggestions(soup, images_needing_alt)
 
                 result["content_analysis"] = self._analyze_content(soup, doc)
                 result["technical_factors"] = await self._analyze_technical(session, url, soup, response)
@@ -238,9 +262,10 @@ class WebsiteScraper:
 
         return seo
 
-    def _generate_alt_suggestions(self, soup: BeautifulSoup, images_needing_alt: list, brand_context: list = None) -> dict:
-        """Generate SEO-focused alt text suggestions for images missing alt text."""
+    async def _generate_alt_suggestions(self, soup: BeautifulSoup, images_needing_alt: list, brand_context: list = None) -> dict:
+        """Generate alt text suggestions using LLM for hash/encoded filenames. Parse filenames for others."""
         suggestions = {}
+        hash_images = []  # Collect hash-named images for LLM processing
 
         if not images_needing_alt:
             return suggestions
@@ -249,10 +274,11 @@ class WebsiteScraper:
         skip_extensions = {'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'icon', 'ico'}
         skip_names = {'image', 'photo', 'picture', 'img', 'pic'}
 
-        # Get page content for context (h1, h2, nearby text)
+        # Get page content for context (h1, h2, main content)
         page_h1 = [h1.get_text(strip=True) for h1 in soup.find_all('h1')]
         page_h2 = [h2.get_text(strip=True) for h2 in soup.find_all('h2')][:3]
-        page_context = " ".join(page_h1 + page_h2)
+        page_title = soup.find('title')
+        title_text = page_title.get_text(strip=True) if page_title else ""
 
         # Get brand keywords if documents available
         brand_keywords = ""
@@ -265,19 +291,34 @@ class WebsiteScraper:
             src = img_info.get("src", "")
             filename = img_info.get("filename", "")
 
-            suggestion = ""
-
-            # Detect hash-like filenames (long hex/alphanumeric strings)
-            # Pattern: 20+ chars of hex/alphanumeric, possibly with separators
             is_hash_filename = False
+            is_encoded = False
+
             if filename:
+                # Check for base64/encoded content
+                if filename.startswith(('data:', 'svg+xml', 'base64')) or ',' in filename:
+                    is_encoded = True
+                    hash_images.append({
+                        "src": src,
+                        "filename": filename,
+                        "type": "encoded"
+                    })
+                    continue
+
                 name_without_ext = re.sub(r'\.\w+$', '', filename)
                 # Check if it looks like a hash (20+ hex chars, or multiple hash-like segments)
                 if re.match(r'^[a-f0-9]{20,}(_[a-f0-9]{20,})?', name_without_ext.lower()):
                     is_hash_filename = True
+                    hash_images.append({
+                        "src": src,
+                        "filename": filename,
+                        "type": "hash"
+                    })
+                    continue
 
-            # Only generate suggestions for non-hash filenames
-            if filename and not is_hash_filename:
+            # Generate suggestions for meaningful filenames (parse from filename)
+            suggestion = ""
+            if filename and not is_hash_filename and not is_encoded:
                 # Remove extension
                 name_without_ext = re.sub(r'\.\w+$', '', filename)
                 # Split on separators
@@ -292,25 +333,74 @@ class WebsiteScraper:
                     # Use first 2-3 meaningful words from filename
                     suggestion = " ".join(name_parts[:3])
                     suggestion = suggestion.capitalize()
+                    suggestions[src] = suggestion
 
-            # If no good suggestion from filename, use page context (only if not hash)
-            if not suggestion and not is_hash_filename and page_context:
-                # Use first page heading as context
+        # Use LLM to generate alt text for hash/encoded filenames
+        if hash_images:
+            llm_suggestions = await self._generate_alt_text_with_llm(
+                hash_images,
+                page_h1,
+                page_h2,
+                title_text,
+                brand_keywords
+            )
+            suggestions.update(llm_suggestions)
+
+        return suggestions
+
+    async def _generate_alt_text_with_llm(self, hash_images: list, page_h1: list, page_h2: list, title: str, brand_keywords: str) -> dict:
+        """Use LLM to generate meaningful alt text for hash/encoded filenames."""
+        suggestions = {}
+        model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+
+        for img in hash_images:
+            src = img.get("src", "")
+            filename = img.get("filename", "")
+
+            try:
+                # Build context for the LLM
+                page_context = f"Page title: {title}\n"
                 if page_h1:
-                    suggestion = f"Related to {page_h1[0][:40]}..."
+                    page_context += f"Main heading: {page_h1[0]}\n"
+                if page_h2:
+                    page_context += f"Section headings: {', '.join(page_h2)}\n"
 
-            # Generate appropriate suggestion based on what we found
-            if suggestion:
-                if brand_keywords:
-                    suggestion = f"{suggestion} (include brand/product details for SEO)"
-            elif is_hash_filename:
-                # For hash filenames, tell user to manually write alt text
-                suggestion = "⚠️ Filename is a hash — manually write descriptive alt text (what, who, context for SEO)"
-            else:
-                # Generic fallback for other cases
-                suggestion = "Descriptive image alt text (include what, who, context for SEO)"
+                prompt = f"""Based on the following page context, generate a brief, descriptive alt text (1-3 sentences) for an image with filename: {filename}
 
-            suggestions[src] = suggestion
+Page Context:
+{page_context}
+
+Image filename: {filename}
+Image location: {src}
+
+Write ONLY the alt text description, nothing else. No quotes, no explanation."""
+
+                print(f"[LLM] Calling {model} for alt text generation of hash-named image")
+                response = await litellm.acompletion(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert at writing descriptive, SEO-friendly alt text for images based on limited context. Generate concise, clear descriptions that would help accessibility and search engine understanding."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    temperature=0.3,
+                    max_tokens=100
+                )
+
+                alt_text = response.choices[0].message.content.strip()
+                if alt_text and len(alt_text) > 5:  # Ensure it's a reasonable response
+                    suggestions[src] = alt_text
+                    print(f"[LLM] ✅ Generated alt text for {filename[:30]}...")
+
+            except Exception as e:
+                print(f"[ERROR] LLM alt text generation failed for {filename}: {str(e)}")
+                # Fallback to placeholder if LLM fails
+                suggestions[src] = "Image with hash filename - please add descriptive alt text"
 
         return suggestions
 
@@ -583,32 +673,13 @@ class WebsiteScraper:
                 messaging["cta_language"].append(text)
         messaging["cta_language"] = list(dict.fromkeys(messaging["cta_language"]))[:8]
 
-        # Audience signals: look for persona/role language
+        # Audience inference: Leave empty for LLM-based inference in analyzer.py
+        # Regex heuristics produce unreliable results (e.g., "speed; practitioner")
+        # The LLM in analyzer._infer_missing_audience() provides quality audience inference
+        messaging["apparent_audience"] = ""
+
+        # Get full page text for tone analysis and other heuristics
         full_text = soup.get_text(separator=" ", strip=True)
-        audience_signals = []
-        audience_patterns = [
-            r"for\s+(enterprise|teams|developers|security\s+teams|CTOs|CISOs|engineers|marketers|executives|founders?|startup|businesses?)",
-            r"built\s+for\s+([\w\s]{5,25}?)(?=[,;.\n]|$)",
-            r"designed\s+for\s+([\w\s]{5,25}?)(?=[,;.\n]|$)",
-            r"trusted\s+by\s+([\w\s]{5,25}?)(?=[,;.\n]|$)"
-        ]
-        for pat in audience_patterns:
-            matches = re.findall(pat, full_text, re.I)
-            for m in matches[:2]:
-                cleaned = m.strip().rstrip(".,;")
-                # Keep only short, clean phrases (not sentences)
-                # Must be: short length, max 4 words, and no internal semicolons or garbage patterns
-                word_count = len(cleaned.split())
-                has_garbage = any(x in cleaned.lower() for x in ['different game', 'years ago', 'that world', 'ten ', 'time ', 'game ', 'world', 'year ', 'day '])
-                # Also filter out generic/vague single-word terms that aren't specific audience roles
-                is_vague_word = word_count == 1 and cleaned.lower() in ['innovation', 'growth', 'success', 'business', 'industry', 'market', 'digital', 'modern', 'future']
-                if len(cleaned) < 30 and word_count <= 4 and not has_garbage and not is_vague_word:
-                    audience_signals.append(cleaned)
-        if audience_signals:
-            messaging["apparent_audience"] = "; ".join(list(dict.fromkeys(audience_signals))[:3])
-        else:
-            # Leave empty for LLM inference if no good audience signals found
-            messaging["apparent_audience"] = ""
 
         # Tone heuristic
         word_count = len(full_text.split())
@@ -889,15 +960,34 @@ class WebsiteScraper:
         h1_text = " ".join(result.get("seo_factors", {}).get("h1_tags", []))
         h2_text = " ".join(result.get("seo_factors", {}).get("h2_tags", []))
         headings_text = h1_text + " " + h2_text
-        # Look for suspiciously long all-lowercase runs (8+ chars) with no space — likely fused words
-        fused_matches = re.findall(r'\b[a-z]{9,}\b', headings_text)
-        # Exclude real long words
+        # Look for suspiciously long all-lowercase runs (9+ chars) with no space — likely fused words
+        fused_matches = re.findall(r'\b[a-z]{9,}\b', headings_text.lower())
+        # Exclude real long words — comprehensive list of common legitimate long words
         real_long_words = {"enterprise", "organization", "technology", "management", "performance",
                            "compliance", "integration", "application", "protection", "understand",
                            "cybersecurity", "intelligence", "infrastructure", "configuration",
                            "automatically", "implementation", "architecture", "communication",
                            "development", "requirements", "environment", "processing", "visibility",
-                           "capabilities", "customization", "optimization", "recommendations"}
+                           "capabilities", "customization", "optimization", "recommendations",
+                           "accessibility", "availability", "authentication", "authorization",
+                           "collaboration", "comprehensive", "confidentiality", "consolidation",
+                           "demonstration", "documentation", "environment", "enterprise",
+                           "evaluation", "exceptional", "exploitation", "exploration",
+                           "firewall", "fundamental", "functionality", "government",
+                           "healthcare", "information", "integration", "interactive",
+                           "introduction", "investigate", "methodology", "monitoring",
+                           "notification", "observation", "operational", "opportunity",
+                           "organization", "participate", "partnership", "performance",
+                           "perspective", "platform", "productivity", "professional",
+                           "progressive", "protection", "publication", "recognition",
+                           "recommendation", "regulatory", "relationship", "responsible",
+                           "restoration", "retirement", "satisfaction", "segmentation",
+                           "sensitivity", "significant", "simplicity", "specialization",
+                           "specification", "subscription", "substantial", "successfully",
+                           "sustainable", "synchronization", "temperature", "termination",
+                           "traditional", "transaction", "transformation", "transition",
+                           "transparency", "troubleshoot", "understand", "universally",
+                           "vulnerability", "waterfall", "weathering", "workstation"}
         fused_suspects = [w for w in fused_matches if w not in real_long_words]
         if fused_suspects:
             issues.append({
