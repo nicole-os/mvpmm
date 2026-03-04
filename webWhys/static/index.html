@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>webWhys — Website & Competitor Analysis</title>
+    <meta name="description" content="Scan your website and competitors to get AI-powered SEO, GEO, and LLM discoverability optimization suggestions.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>webWhys</h1>
+            <p>Analyze your website → up your gaime.</p>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Input Form Section -->
+            <section id="input-section">
+                <div class="asymmetric-grid-35-65">
+                    <!-- Left Column (35%): Image + Brand Documents -->
+                    <div class="form-column">
+                        <img src="/static/images/accent-laptop-1.png" alt="Laptop nested in nature" class="image-accent">
+
+                        <!-- Brand Documents -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Brand & Positioning Documents</h2>
+                            </div>
+                            <p style="margin-bottom: var(--spacing-md); color: var(--grey-medium);">
+                                Upload documents that describe your brand, values, positioning, product documentation, or target personas. These help generate more tailored recommendations.
+                            </p>
+                            <div class="file-upload-area" id="file-drop-area">
+                                <div class="upload-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                </div>
+                                <p>Drag & drop files here or <span class="browse-link">browse</span></p>
+                                <p class="hint">Supports PDF, DOCX, TXT, MD (files are processed but not stored)</p>
+                                <input type="file" id="file-input" multiple accept=".pdf,.docx,.doc,.txt,.md,.rtf" hidden>
+                            </div>
+                            <div class="file-list" id="file-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (65%): Form Fields -->
+                    <form id="scan-form" class="form-column">
+                        <!-- Your Website -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>Your Website</h2>
+                            </div>
+                            <div class="form-group">
+                                <input type="url" id="your-website" name="your_website"
+                                       placeholder="https://yourcompany.com" required>
+                                <p class="hint">Enter the main URL of your website to analyze</p>
+                            </div>
+                        </div>
+
+                        <!-- Competitor & Focus Areas Row -->
+                        <div class="cards-row">
+                            <!-- Competitor Websites -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h2>Competitor Websites</h2>
+                                </div>
+                                <div class="form-group">
+                                    <textarea id="competitor-urls" name="competitor_urls" rows="3"
+                                              placeholder="https://competitor1.com&#10;https://competitor2.com&#10;https://competitor3.com"></textarea>
+                                    <p class="hint">Enter up to 5 competitor URLs, one per line or comma-separated</p>
+                                </div>
+                            </div>
+
+                            <!-- Focus Areas -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h2>Focus Areas (Optional)</h2>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="focus-areas" name="focus_areas"
+                                           placeholder="e.g., LLM discoverability, content quality, technical SEO">
+                                    <p class="hint">Comma-separated list of areas you want to focus on</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center mt-lg">
+                            <button type="submit" class="btn btn-primary btn-lg" id="scan-button">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                Analyze Websites
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Loading Section -->
+            <section id="loading-section" class="loading">
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <p class="loading-text" id="loading-message">Analyzing your website...</p>
+                    <div class="progress-steps" id="progress-steps">
+                        <div class="progress-step" data-step="your-site">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                            </svg>
+                            Your Site
+                        </div>
+                        <div class="progress-step" data-step="competitors">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            </svg>
+                            Competitors
+                        </div>
+                        <div class="progress-step" data-step="documents">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16"/>
+                            </svg>
+                            Documents
+                        </div>
+                        <div class="progress-step" data-step="analysis">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20V10M18 20V4M6 20v-4"/>
+                            </svg>
+                            Analysis
+                        </div>
+                    </div>
+                </div>
+                <div class="loading-bg"></div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="results-section">
+                <div class="card">
+                    <!-- Analysis Summary Banner -->
+                    <div id="analysis-summary" style="background: #4A3453; color: white; padding: 20px; border-radius: 0; margin-bottom: 20px; border: 1px solid #3a2742;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <h2 style="margin: 0 0 8px 0; font-size: 1.3rem;">Analysis Results</h2>
+                                <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;" id="analyzed-url">Page analyzed: Loading...</p>
+                            </div>
+                            <button class="btn" id="export-btn" style="background: white; color: var(--olive-green-dark); padding: 10px 20px;">
+                                <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" style="margin-right: 5px;">
+                                    <path d="M321-160q-24 0-42-18t-18-42v-100h124v-127q-38 3-76-10.5T241-500v-58h-50L60-689q36-34 86-55.5T248-766q30 0 68.5 9.5T385-726v-74h455v535q0 44-30.5 74.5T735-160H321Zm124-160h245v55q0 20 12.5 32.5T735-220q20 0 32.5-12.5T780-265v-475H445v57l241 241v43h-43L517-525l-17 20q-13 15-26 23t-29 15v147ZM218-618h83v89q17 11 33.5 16.5T368-507q25 0 51-13.5t38-27.5l17-20-69-69q-32-32-72-50.5T248-706q-27 0-49 6.5T154-682l64 64Zm412 358H321v40h323q-6-6-10-16.5t-4-23.5Zm-309 40v-40 40Z"/>
+                                </svg>
+                                Export to Doc
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="tabs">
+                        <button class="tab active" data-tab="priority">Priority Actions</button>
+                        <button class="tab" data-tab="your-site">Your Site Analysis</button>
+                        <button class="tab" data-tab="competitors-tab">Competitor Comparison</button>
+                        <button class="tab" data-tab="recommendations">All Recommendations</button>
+                        <button class="tab" data-tab="copy-suggestions">Copy Suggestions</button>
+                    </div>
+
+                    <!-- Priority Actions Tab -->
+                    <div class="tab-content active" id="tab-priority">
+                        <h3 style="margin-bottom: var(--spacing-md);" class="tab-heading">Top 5 Priority Actions</h3>
+                        <p style="color: var(--grey-medium); margin-bottom: var(--spacing-lg);" class="tab-subtext">
+                            These are the highest-impact actions you should take first, ranked by potential impact and effort required.
+                        </p>
+                        <div class="priority-grid" id="priority-grid">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Your Site Analysis Tab -->
+                    <div class="tab-content" id="tab-your-site">
+                        <div class="analysis-grid" id="site-metrics">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Competitor Comparison Tab -->
+                    <div class="tab-content" id="tab-competitors-tab">
+                        <div id="competitor-comparison">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- All Recommendations Tab -->
+                    <div class="tab-content" id="tab-recommendations">
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: var(--spacing-lg);">
+                            <div>
+                                <span style="font-size: 0.82rem; color: var(--grey-medium); margin-right: 6px;">Filter:</span>
+                                <button class="btn btn-outline filter-btn active" data-filter="all" style="padding: 5px 12px; font-size: 0.82rem;">All</button>
+                                <button class="btn btn-outline filter-btn" data-filter="SEO" style="padding: 5px 12px; font-size: 0.82rem;">SEO</button>
+                                <button class="btn btn-outline filter-btn" data-filter="AI Discoverability" style="padding: 5px 12px; font-size: 0.82rem;">AI Discoverability</button>
+                                <button class="btn btn-outline filter-btn" data-filter="Messaging" style="padding: 5px 12px; font-size: 0.82rem;">Messaging</button>
+                                <button class="btn btn-outline filter-btn" data-filter="Technical" style="padding: 5px 12px; font-size: 0.82rem;">Technical</button>
+                                <button class="btn btn-outline filter-btn" data-filter="Competitive" style="padding: 5px 12px; font-size: 0.82rem;">Competitive</button>
+                            </div>
+                            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.82rem; color: var(--grey-medium);">Sort by:</span>
+                                <button class="btn btn-outline sort-btn" data-sort="impact" style="padding: 5px 12px; font-size: 0.82rem;">Impact ↑</button>
+                                <button class="btn btn-outline sort-btn" data-sort="effort" style="padding: 5px 12px; font-size: 0.82rem;">Effort ↓</button>
+                            </div>
+                        </div>
+                        <div id="recommendations-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Copy Suggestions Tab -->
+                    <div class="tab-content" id="tab-copy-suggestions">
+                        <div id="copy-suggestions-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Scan Button -->
+                <div style="margin-top: var(--spacing-lg); text-align: left;">
+                    <button class="btn btn-secondary" id="new-scan-btn">
+                        <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M317-140h326l48-190H269l48 190Zm0 60q-20 0-36.29-12.54Q264.43-105.08 259-125l-52-205h546l-52 205q-5.43 19.92-21.71 32.46Q663-80 643-80H317ZM180-390h600v-100H180v100Zm301-251q0-87 75-160.5T719-880q-3 81-67 150.5T510-645v95h330v160q0 24.75-17.62 42.37Q804.75-330 780-330H180q-24.75 0-42.37-17.63Q120-365.25 120-390v-160h330v-95q-78-15-141.5-84.5T241-880q88 5 164 78t76 161Z"/>
+                        </svg>
+                        Start New Analysis
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>webWhys | open-source website &amp; competitor analysis | <a href="https://github.com/nicole-os/mvpmm/tree/main/webWhys" style="color: var(--grey-light); text-decoration: underline;">GitHub</a></p>
+            <p style="font-size: 0.85rem; color: var(--grey-light); margin-top: 8px;"><a href="https://www.linkedin.com/in/nicolescottfromraleigh/" target="_blank" style="color: var(--grey-light); text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">Minimum Viable Product (Marketing) <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.469v6.766z"/></svg></a></p>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
