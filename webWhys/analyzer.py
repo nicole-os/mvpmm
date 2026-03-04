@@ -355,9 +355,15 @@ Your recommendations must follow these rules without exception:
             }
 
         except Exception as e:
-            # Fallback to rule-based recommendations if LLM fails
+            # Log error instead of silently failing
+            error_msg = str(e)
+            print(f"[ERROR] LLM recommendations API call failed: {error_msg}")
+            import traceback
+            traceback.print_exc()
+
             return {
-                "recommendations": self._generate_fallback_recommendations(your_site, gaps, focus_areas),
+                "error": f"LLM API call failed: {error_msg}. Check your OpenAI API key is valid and has credits.",
+                "recommendations": [],
                 "copy_suggestions": []
             }
 

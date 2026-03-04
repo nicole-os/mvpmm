@@ -488,6 +488,8 @@ textarea::placeholder {
 .tab-content.active {
     display: block;
     max-width: 1100px;
+    overflow: hidden;
+    width: 100%;
 }
 
 /* Hide intro text for Priority Actions */
@@ -677,6 +679,8 @@ textarea::placeholder {
     margin-top: var(--spacing-lg);
     margin-right: auto;
     max-width: 1050px;
+    overflow: hidden;
+    width: 100%;
 }
 
 @media (max-width: 1200px) {
