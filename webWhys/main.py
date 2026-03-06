@@ -23,10 +23,15 @@ SEO/GEO/LLM discoverability optimization suggestions.
 """
 
 import os
+from dotenv import load_dotenv
 import io
 import tempfile
 from typing import Optional
 from datetime import datetime
+from contextlib import asynccontextmanager
+
+# Load environment variables from .env file
+load_dotenv()
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
@@ -42,6 +47,7 @@ from scraper import WebsiteScraper
 from analyzer import OptimizationAnalyzer
 from document_processor import DocumentProcessor
 from metric_explanations import generate_metric_insights, get_all_explanations
+from browser_manager import PlaywrightBrowserManager
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
@@ -217,10 +223,38 @@ def indent_paragraph(paragraph, indent_inches=0.0625):
     """Add left indentation to a paragraph."""
     paragraph.paragraph_format.left_indent = Inches(indent_inches)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for FastAPI app.
+    Handles startup and shutdown of Playwright browser manager.
+    """
+    # Startup
+    print("\n" + "="*60)
+    print("  webWhys — Website & Competitor Analysis")
+    print("  Initializing Playwright browser manager...")
+    print("="*60)
+
+    # Browser will be lazily initialized on first render request
+
+    yield  # App runs here
+
+    # Shutdown
+    print("\n" + "="*60)
+    print("  Shutting down Playwright browser manager...")
+    print("="*60)
+
+    await PlaywrightBrowserManager.shutdown()
+    print("  Cleanup complete")
+    print("="*60 + "\n")
+
+
 app = FastAPI(
     title="Website Competitor Scanner",
     description="Scan your website and competitors to get AI-powered optimization suggestions",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware for frontend

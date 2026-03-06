@@ -315,7 +315,7 @@ class WebsiteScanner {
         // Add image card at position 3
         cardsHtml += `
             <div class="priority-card image-card">
-                <img src="/static/images/accent-photo.png" alt="Accent image">
+                <img src="/static/images/accent-photo-tab3.png" alt="Accent image">
             </div>
         `;
 
@@ -1040,7 +1040,7 @@ class WebsiteScanner {
 
                     <!-- Right column: 30% image container (stretches to match left column height) -->
                     <div style="flex: 0 0 calc(30% - 14px); border: 1px solid #E8E6E3; border-radius: 0; background: #FAF8F6; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                        <img src="/static/images/accent-photo-tab5.png" alt="Competitor keyword intelligence" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                        <img src="/static/images/accent-photo-tab5-competitors.png" alt="Competitor keyword intelligence" style="width: 100%; height: 100%; object-fit: cover; display: block;">
                     </div>
                 </div>
 

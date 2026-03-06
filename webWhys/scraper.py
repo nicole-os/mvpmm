@@ -31,6 +31,7 @@ from bs4 import BeautifulSoup
 from readability import Document
 import tldextract
 import litellm
+from browser_manager import PlaywrightBrowserManager
 
 
 class WebsiteScraper:
@@ -71,7 +72,6 @@ class WebsiteScraper:
             "geo_factors": {},
             "page_messaging": {},
             "scannability": {},
-            "alt_text_suggestions": {},
             "issues": [],
             "strengths": []
         }
@@ -130,25 +130,36 @@ class WebsiteScraper:
                     return result
 
                 # Detect JavaScript-heavy sites (very low word count with no bot protection message)
-                if word_count_check < 150:
-                    result["status"] = "requires-javascript"
-                    result["warning"] = "This site may load content via JavaScript or display a popup that prevents full scanning. Limited data available. JavaScript rendering functionality coming soon."
-                    result["http_status"] = response.status
-                    # Continue scanning with limited data rather than stopping
+                if await self._should_render_with_playwright(html, word_count_check):
+                    print(f"[Scraper] Detected JavaScript-heavy site: {url}")
+                    rendered_html = await self._render_with_playwright(url)
+
+                    if rendered_html:
+                        # Re-parse with rendered HTML
+                        html = rendered_html
+                        soup = BeautifulSoup(html, "lxml")
+                        doc = Document(html)
+                        # Recalculate page text and word count
+                        page_text = soup.get_text(" ", strip=True)
+                        word_count_check = len(page_text.split())
+                        print(f"[Scraper] Re-parsed with Playwright. New word count: {word_count_check}")
+                    else:
+                        # Playwright rendering failed - continue with limited data
+                        result["status"] = "requires-javascript"
+                        result["warning"] = "This site requires JavaScript rendering. Playwright rendering was attempted but failed (timeout or error). Limited data available."
+                        result["http_status"] = response.status
 
                 # Analyze all aspects
                 result["seo_factors"] = self._analyze_seo(soup, url)
 
-                # Generate alt text suggestions if there are images without alt text
-                images_needing_alt = result["seo_factors"].pop("images_needing_alt", [])
-                if images_needing_alt:
-                    result["alt_text_suggestions"] = await self._generate_alt_suggestions(soup, images_needing_alt)
+                # Remove images_needing_alt from SEO factors (no longer used)
+                result["seo_factors"].pop("images_needing_alt", [])
 
                 result["content_analysis"] = self._analyze_content(soup, doc)
                 result["technical_factors"] = await self._analyze_technical(session, url, soup, response)
                 result["llm_discoverability"] = self._analyze_llm_factors(soup, html)
                 result["geo_factors"] = self._analyze_geo_factors(soup)
-                result["page_messaging"] = self._analyze_page_messaging(soup)
+                result["page_messaging"] = await self._analyze_page_messaging(soup)
                 result["scannability"] = self._analyze_scannability(soup)
 
                 # Compile issues and strengths
@@ -206,9 +217,9 @@ class WebsiteScraper:
 
         # Headings — use separator=" " to prevent adjacent inline elements merging words
         for h1 in soup.find_all("h1"):
-            seo["h1_tags"].append(h1.get_text(separator=" ", strip=True)[:100])
+            seo["h1_tags"].append(h1.get_text(separator=" ", strip=True))
         for h2 in soup.find_all("h2"):
-            seo["h2_tags"].append(h2.get_text(separator=" ", strip=True)[:100])
+            seo["h2_tags"].append(h2.get_text(separator=" ", strip=True))
         for h3 in soup.find_all("h3"):
             seo["h3_tags"].append(h3.get_text(separator=" ", strip=True)[:100])
 
@@ -404,6 +415,96 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
 
         return suggestions
 
+    async def _should_render_with_playwright(self, html: str, word_count: int) -> bool:
+        """
+        Determine if Playwright rendering is needed for a page.
+        Checks for JavaScript-heavy indicators and framework signals.
+        """
+        # Check 1: Word count < 150 (existing JS detection)
+        if word_count < 150:
+            return True
+
+        # Check 2: Detect framework signals in HTML
+        framework_signals = [
+            '<script src="/__next/',  # Next.js
+            '<script src="/_astro/',  # Astro
+            'data-react-root',        # React
+            'ng-app',                 # Angular
+            'v-app',                  # Vue
+            '<noscript>Enable JavaScript',  # Explicit JS requirement
+        ]
+
+        for signal in framework_signals:
+            if signal in html:
+                return True
+
+        return False
+
+    async def _render_with_playwright(self, url: str) -> str:
+        """
+        Render a JavaScript-heavy page using Playwright and return rendered HTML.
+        Falls back to None on timeout or error (graceful fallback).
+        """
+        try:
+            browser_manager = PlaywrightBrowserManager()
+            html, metadata = await browser_manager.render_page(url, timeout=10)
+
+            if html:
+                print(f"[Playwright] ✅ Rendered {url}")
+                return html
+            else:
+                print(f"[Playwright] ⚠️ Timeout/error rendering {url}, falling back to static")
+                return None
+
+        except Exception as e:
+            print(f"[Playwright] ❌ Error rendering {url}: {str(e)}")
+            return None
+
+    async def _infer_keywords_with_llm(self, title: str, primary_message: str, h2_tags: list, meta_description: str, key_claims: list) -> list:
+        """
+        Use LLM to intelligently identify keywords this page is targeting based on content signals.
+        Works for any industry — doesn't rely on hard-coded industry keyword lists.
+        """
+        try:
+            # Build context from page signals
+            context = f"""
+Title: {title}
+H1/Primary Message: {primary_message}
+H2 Headings: {', '.join(h2_tags[:3]) if h2_tags else 'N/A'}
+Meta Description: {meta_description}
+Key Claims: {', '.join(key_claims) if key_claims else 'N/A'}
+"""
+
+            model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+            print(f"[LLM] Calling {model} for keyword identification")
+
+            response = await litellm.acompletion(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an SEO expert analyzing what keywords a page targets. Based on the page's content signals (title, H1, headings, meta, claims), identify the main keywords/topics this page is optimizing for. Return ONLY a comma-separated list of 5-8 keywords or short phrases (no more than 3 words each). No explanations, no quotes."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"What keywords/topics is this page targeting? Return only comma-separated keywords:\n{context}"
+                    }
+                ],
+                temperature=0.0,  # Deterministic output
+                max_tokens=100
+            )
+
+            keywords_str = response.choices[0].message.content.strip()
+            print(f"[LLM] ✅ Keywords identified: {keywords_str}")
+
+            # Parse comma-separated keywords
+            keywords = [kw.strip() for kw in keywords_str.split(",") if kw.strip()]
+            return keywords[:10]  # Return up to 10 keywords
+
+        except Exception as e:
+            print(f"[LLM] ❌ Keyword identification failed: {str(e)}")
+            return []
+
     def _analyze_content(self, soup: BeautifulSoup, doc: Document) -> dict:
         """Analyze content quality and structure."""
         content = {
@@ -452,8 +553,10 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
 
     async def _analyze_technical(self, session: aiohttp.ClientSession, url: str, soup: BeautifulSoup, response) -> dict:
         """Analyze technical SEO factors."""
+        # Use final URL (after redirects) for HTTPS check
+        final_url = str(response.url)
         technical = {
-            "https": url.startswith("https"),
+            "https": final_url.startswith("https"),
             "response_time_ms": 0,
             "has_robots_txt": False,
             "has_sitemap": False,
@@ -596,7 +699,60 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
 
         return geo
 
-    def _analyze_page_messaging(self, soup: BeautifulSoup) -> dict:
+    async def _infer_keywords_with_llm(
+        self,
+        title: str,
+        primary_message: str,
+        h2_tags: list,
+        meta_description: str,
+        key_claims: list
+    ) -> list:
+        """
+        Use LLM to intelligently extract keywords from page content.
+        Unlike hard-coded approaches, this works across any industry.
+        """
+        # Prepare content signals for LLM analysis
+        content = {
+            "page_title": title,
+            "primary_message": primary_message,
+            "subheadings": h2_tags[:5] if h2_tags else [],
+            "meta_description": meta_description,
+            "key_claims": key_claims[:5] if key_claims else []
+        }
+
+        prompt = f"""Analyze this webpage's content and identify the 5-10 most important keywords or key phrases it targets.
+
+Content signals:
+- Page Title: {content['page_title']}
+- Primary Message (H1): {content['primary_message']}
+- Subheadings (H2): {', '.join(content['subheadings'])}
+- Meta Description: {content['meta_description']}
+- Key Claims: {', '.join(content['key_claims'])}
+
+Extract meaningful keywords that represent what this page is optimizing for. These should be:
+- Specific to the content (not generic)
+- Helpful for understanding the page's focus
+- Natural language phrases (not abbreviations unless essential)
+
+Return ONLY a comma-separated list of keywords, nothing else. Example: "keyword one, keyword two, keyword three"
+"""
+
+        try:
+            response = await litellm.acompletion(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,  # Deterministic
+                max_tokens=100
+            )
+            keywords_text = response.choices[0].message.content.strip()
+            # Parse comma-separated keywords
+            keywords = [kw.strip() for kw in keywords_text.split(",") if kw.strip()]
+            return keywords[:10]  # Cap at 10
+        except Exception as e:
+            print(f"[LLM Keywords] Error extracting keywords: {str(e)}")
+            return []
+
+    async def _analyze_page_messaging(self, soup: BeautifulSoup) -> dict:
         """
         Infer the page's core message, intended audience, and value proposition
         from the visible text — hero copy, headings, CTAs, and body content.
@@ -622,11 +778,24 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
             if el:
                 hero_text.append(el.get_text(separator=" ", strip=True)[:300])
 
-        # Primary message = H1 or first hero text
+        # Get page title as fallback
+        page_title = soup.find("title")
+        title_text = page_title.get_text(strip=True) if page_title else ""
+
+        # Primary message = first non-empty H1 or hero text or page title
         if h1_tags:
-            messaging["primary_message"] = h1_tags[0]
+            # Use first non-empty H1 tag
+            non_empty_h1 = next((h1 for h1 in h1_tags if h1.strip()), None)
+            if non_empty_h1:
+                messaging["primary_message"] = non_empty_h1
+            elif hero_text:
+                messaging["primary_message"] = hero_text[0][:150]
+            elif title_text:
+                messaging["primary_message"] = title_text
         elif hero_text:
             messaging["primary_message"] = hero_text[0][:150]
+        elif title_text:
+            messaging["primary_message"] = title_text
 
         # Value prop — look for subheadline patterns near the hero
         # Filter out Lorem Ipsum and placeholder text
@@ -696,111 +865,22 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
             messaging["tone"] = "Professional / Corporate"
 
         # ── Keyword targeting signals ─────────────────────────────────────────
-        # Extract the meaningful keyword TERMS this page appears to be optimizing for.
-        # Strategy: pull individual important words and known compound terms from the
-        # highest-signal locations (title, H1, H2s, meta). Normalize to lowercase so
-        # the same term from different sites will match when compared in the frontend.
-
+        # Use LLM to intelligently extract keywords (industry-agnostic approach)
+        # This replaces hard-coded keyword lists and works across any industry
         title_tag = soup.find("title")
         meta_desc_tag = soup.find("meta", attrs={"name": re.compile(r"description", re.I)})
         title_raw = title_tag.get_text(separator=" ", strip=True) if title_tag else ""
         meta_raw = meta_desc_tag.get("content", "") if meta_desc_tag else ""
 
-        # Sources in priority order: title (x2 weight), H1, H2s, meta description
-        candidate_sources = (
-            [title_raw, title_raw]  # title counts double — it's the strongest SEO signal
-            + [messaging.get("primary_message", "")]
-            + (messaging.get("key_claims") or [])
-            + ([meta_raw] if meta_raw else [])
+        # Call LLM to extract keywords intelligently
+        keywords = await self._infer_keywords_with_llm(
+            title=title_raw,
+            primary_message=messaging.get("primary_message", ""),
+            h2_tags=h2_tags,
+            meta_description=meta_raw,
+            key_claims=messaging.get("key_claims", [])
         )
-        full_candidate_text = " ".join(candidate_sources).lower()
-
-        # Known compound keyword terms to detect as single units (checked first)
-        compound_terms = [
-            "zero trust", "zero-trust", "identity and access management", "iam",
-            "privileged access management", "pam", "endpoint detection and response", "edr",
-            "extended detection and response", "xdr", "security information and event management", "siem",
-            "cloud security", "network security", "application security", "data security",
-            "access control", "access management", "identity management", "identity security",
-            "threat detection", "threat intelligence", "threat prevention", "threat response",
-            "incident response", "vulnerability management", "patch management",
-            "risk management", "compliance management", "security posture",
-            "remote access", "secure access", "privileged access", "least privilege",
-            "multi-factor authentication", "mfa", "single sign-on", "sso",
-            "endpoint security", "endpoint protection", "endpoint management",
-            "device management", "mobile device management", "mdm",
-            "data loss prevention", "dlp", "data protection", "data privacy",
-            "ransomware protection", "malware protection", "phishing protection",
-            "security operations", "security automation", "security orchestration",
-            "devsecops", "devops security", "cloud-native", "hybrid cloud",
-            "digital transformation", "workforce security", "remote workforce",
-            "user behavior analytics", "behavioral analytics", "anomaly detection",
-            "ai security", "machine learning security", "security platform",
-            "security solution", "security tool", "security software",
-        ]
-
-        # High-value single-word signals worth surfacing on their own
-        single_terms = [
-            "cybersecurity", "microsegmentation", "segmentation", "authentication",
-            "authorization", "encryption", "visibility", "compliance", "governance",
-            "automation", "orchestration", "analytics", "monitoring", "detection",
-            "prevention", "protection", "remediation", "resilience", "posture",
-            "identity", "access", "network", "endpoint", "cloud", "hybrid", "workforce",
-        ]
-
-        # Generic stop words — not useful as keyword signals
-        stop_words = {
-            "the", "and", "for", "with", "that", "this", "your", "from", "are",
-            "our", "you", "how", "more", "get", "all", "can", "will", "has",
-            "have", "its", "not", "but", "was", "they", "them", "their", "been",
-            "into", "about", "when", "which", "what", "who", "also", "just",
-            "most", "any", "new", "use", "one", "two", "help", "make", "need",
-            "work", "time", "way", "see", "now", "only", "over", "than",
-        }
-
-        found_keywords = []
-        seen_kw = set()
-
-        # First pass: detect known compound terms
-        for term in compound_terms:
-            if term in full_candidate_text and term not in seen_kw:
-                seen_kw.add(term)
-                # Use a clean display form (capitalize first letter)
-                found_keywords.append(term.replace("-", " ").title() if len(term) > 4 else term.upper())
-
-        # Second pass: detect high-value single terms
-        for term in single_terms:
-            if re.search(r'\b' + re.escape(term) + r'\b', full_candidate_text) and term not in seen_kw:
-                seen_kw.add(term)
-                found_keywords.append(term.capitalize())
-
-        # Third pass: any remaining 2-word phrases from title/H1 that aren't stop words
-        # (catches brand-specific terms not in our lists)
-        title_h1_text = (title_raw + " " + messaging.get("primary_message", "")).lower()
-        two_word_phrases = re.findall(r'\b([a-z]+\s+[a-z]+)\b', title_h1_text)
-        for phrase in two_word_phrases:
-            words = phrase.split()
-            if phrase in seen_kw:
-                continue
-            # Skip if any word is a stop word
-            if any(w in stop_words for w in words):
-                continue
-            # Skip repeated words (e.g. "okta okta")
-            if words[0] == words[1]:
-                continue
-            # Skip if either word is too short to be meaningful
-            if any(len(w) < 4 for w in words):
-                continue
-            # Skip if it looks like a gerund/verb phrase starting with a verb-like word
-            if words[0].endswith(('ing', 'ures', 'ets', 'sts', 'nds')):
-                continue
-            seen_kw.add(phrase)
-            found_keywords.append(phrase.title())
-
-        # Keep top 10, prioritizing compound terms (they appear first)
-        # Sort deterministically: by priority (compound first, then single, then two-word),
-        # then alphabetically within each group to ensure reproducible results
-        messaging["keyword_targets"] = found_keywords[:10]
+        messaging["keyword_targets"] = keywords
 
         return messaging
 
@@ -953,48 +1033,6 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
 
         if not geo.get("citation_ready"):
             issues.append({"category": "GEO", "severity": "medium", "issue": "Content not optimized for AI citations"})
-
-        # Content rendering / text quality issues
-        # Detect fused words — adjacent inline elements with no space separator
-        # e.g. "workinstant" from <span>work</span><span>instant</span>
-        h1_text = " ".join(result.get("seo_factors", {}).get("h1_tags", []))
-        h2_text = " ".join(result.get("seo_factors", {}).get("h2_tags", []))
-        headings_text = h1_text + " " + h2_text
-        # Look for suspiciously long all-lowercase runs (9+ chars) with no space — likely fused words
-        fused_matches = re.findall(r'\b[a-z]{9,}\b', headings_text.lower())
-        # Exclude real long words — comprehensive list of common legitimate long words
-        real_long_words = {"enterprise", "organization", "technology", "management", "performance",
-                           "compliance", "integration", "application", "protection", "understand",
-                           "cybersecurity", "intelligence", "infrastructure", "configuration",
-                           "automatically", "implementation", "architecture", "communication",
-                           "development", "requirements", "environment", "processing", "visibility",
-                           "capabilities", "customization", "optimization", "recommendations",
-                           "accessibility", "availability", "authentication", "authorization",
-                           "collaboration", "comprehensive", "confidentiality", "consolidation",
-                           "demonstration", "documentation", "environment", "enterprise",
-                           "evaluation", "exceptional", "exploitation", "exploration",
-                           "firewall", "fundamental", "functionality", "government",
-                           "healthcare", "information", "integration", "interactive",
-                           "introduction", "investigate", "methodology", "monitoring",
-                           "notification", "observation", "operational", "opportunity",
-                           "organization", "participate", "partnership", "performance",
-                           "perspective", "platform", "productivity", "professional",
-                           "progressive", "protection", "publication", "recognition",
-                           "recommendation", "regulatory", "relationship", "responsible",
-                           "restoration", "retirement", "satisfaction", "segmentation",
-                           "sensitivity", "significant", "simplicity", "specialization",
-                           "specification", "subscription", "substantial", "successfully",
-                           "sustainable", "synchronization", "temperature", "termination",
-                           "traditional", "transaction", "transformation", "transition",
-                           "transparency", "troubleshoot", "understand", "universally",
-                           "vulnerability", "waterfall", "weathering", "workstation"}
-        fused_suspects = [w for w in fused_matches if w not in real_long_words]
-        if fused_suspects:
-            issues.append({
-                "category": "Content",
-                "severity": "medium",
-                "issue": f"Possible fused/missing-space words in headings (e.g. '{fused_suspects[0]}'). This is a rendering or CMS issue where adjacent text elements are not separated by spaces. Affects readability and SEO."
-            })
 
         # Strengths
         if seo.get("title") and 30 <= seo.get("title_length", 0) <= 60:
