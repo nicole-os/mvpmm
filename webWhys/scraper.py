@@ -464,28 +464,11 @@ class WebsiteScraper:
 
         seo["images_needing_alt"] = images_needing_alt
 
-        # Word count - use standard library HTMLParser (Python 3.13 compatible)
+        # Word count - use full soup text so nav/hero/feature sections are all counted.
+        # readability doc.summary() is too aggressive for homepages and strips most content.
         try:
-            if doc:
-                # Get readability summary (main content)
-                html_to_parse = doc.summary()
-            else:
-                # Get full page HTML from soup
-                html_to_parse = str(soup)
-
-            # Extract text using standard library HTML parser (no dependencies)
-            extractor = TextExtractor()
-            try:
-                extractor.feed(html_to_parse)
-                text = extractor.get_text()
-                seo["word_count"] = len(text.split())
-            except Exception as parser_error:
-                # If parser fails, try regex fallback
-                text = re.sub(r'<[^>]+>', ' ', html_to_parse)
-                text = re.sub(r'\s+', ' ', text).strip()
-                seo["word_count"] = len(text.split())
-        except Exception as e:
-            # Final fallback
+            seo["word_count"] = len(soup.get_text(separator=" ", strip=True).split())
+        except Exception:
             seo["word_count"] = 0
 
         return seo
@@ -664,7 +647,7 @@ Write ONLY the alt text description, nothing else. No quotes, no explanation."""
         """
         try:
             browser_manager = PlaywrightBrowserManager()
-            html, metadata = await browser_manager.render_page(url, timeout=10)
+            html, metadata = await browser_manager.render_page(url, timeout=20)
 
             if html:
                 logger.debug(f"Playwright rendered: {url}")
