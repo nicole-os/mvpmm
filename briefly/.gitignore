@@ -1,0 +1,19 @@
+# Environment
+.env
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Uploads & temp files
+uploads/
+*.pdf
+server.log
+
+# macOS
+.DS_Store

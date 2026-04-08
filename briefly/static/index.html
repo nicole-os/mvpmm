@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>briefly — branded briefs from blog posts</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with tree -->
+        <header class="header">
+            <div class="header-inner">
+                <img src="/static/assets/tree_dark.png" alt="" class="header-tree" aria-hidden="true">
+                <div class="header-text">
+                    <h1>briefly</h1>
+                    <p class="subtitle">Transform blog posts into branded executive briefs</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Form -->
+        <main class="form-wrapper">
+            <form id="briefForm" class="brief-form">
+
+                <!-- Step 1: Blog URL -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <span class="step-number">1</span>
+                        <h2>Blog Article</h2>
+                    </div>
+                    <div class="form-group">
+                        <label for="blogUrl">Blog URL</label>
+                        <input type="url" id="blogUrl" name="blogUrl" placeholder="https://example.com/blog/article" required>
+                        <small>We'll extract the company info from this URL</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Brief Format</label>
+                        <div style="display: flex; gap: var(--spacing-lg); margin-top: var(--spacing-sm);">
+                            <label style="display: flex; align-items: center; gap: var(--spacing-sm); cursor: pointer;">
+                                <input type="radio" name="pagePreference" value="2" checked> 2-Page Brief
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--spacing-sm); cursor: pointer;">
+                                <input type="radio" name="pagePreference" value="3"> 3-Page Brief
+                            </label>
+                        </div>
+                        <small>Choose between a concise 2-page or detailed 3-page format</small>
+                    </div>
+                </section>
+
+                <!-- Step 2: Messaging Materials -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <span class="step-number">2</span>
+                        <h2>Messaging Materials</h2>
+                    </div>
+                    <div class="form-group">
+                        <label for="brandDocs">Positioning docs, boilerplate, messaging frameworks <span class="label-hint">PDF, DOCX, TXT — optional</span></label>
+                        <input type="file" id="brandDocs" name="brandDocs" accept=".pdf,.docx,.doc,.txt" multiple class="file-input">
+                    </div>
+                    <div id="brandDocsList" class="file-list"></div>
+                </section>
+
+                <!-- Step 3: Branding Configuration -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <span class="step-number">3</span>
+                        <h2>Branding</h2>
+                    </div>
+
+                    <div id="manualBrandingSection" class="manual-branding">
+
+                        <!-- Row 0: Saved Branding + Header Style side by side -->
+                        <div class="branding-top-row">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Saved branding file <span class="label-hint">.json — optional</span></label>
+                                <input type="file" id="brandingJsonFile" accept=".json" class="file-input">
+                            </div>
+                            <div class="form-row-full">
+                                <label class="field-label">Header Style <span class="label-hint">2-page brief</span></label>
+                                <div class="header-style-options">
+                                    <label class="header-style-option">
+                                        <input type="radio" name="headerStyle" value="solid">
+                                        <span class="hs-icon">▬</span>
+                                        <span class="hs-label">Plain</span>
+                                    </label>
+                                    <label class="header-style-option">
+                                        <input type="radio" name="headerStyle" value="geometric" checked>
+                                        <span class="hs-icon">◉</span>
+                                        <span class="hs-label">Geometric</span>
+                                    </label>
+                                    <label class="header-style-option">
+                                        <input type="radio" name="headerStyle" value="surprise">
+                                        <span class="hs-icon">✦</span>
+                                        <span class="hs-label">Surprise me</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 1: Logo + Logo Background -->
+                        <div class="logo-row">
+                            <div class="logo-col">
+                                <label for="logoFile" class="field-label">Company Logo <span class="required-star">*</span> <span class="label-hint">PNG or JPG only</span></label>
+                                <input type="file" id="logoFile" accept="image/png,image/jpeg" class="file-input">
+                                <div id="logoPreview" class="logo-preview"></div>
+                            </div>
+                            <div class="logo-bg-col">
+                                <label class="field-label">Desired Logo Background</label>
+                                <div class="logo-bg-card">
+                                    <div class="logo-bg-options">
+                                        <label class="logo-bg-option">
+                                            <input type="radio" name="logoBgMode" value="dark" checked> Dark background
+                                        </label>
+                                        <label class="logo-bg-option">
+                                            <input type="radio" name="logoBgMode" value="light"> Light background
+                                        </label>
+                                    </div>
+                                    <small>Choose <em>Dark</em> if your logo has white/light text, <em>Light</em> if it has dark text.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Company Name + Website -->
+                        <div class="company-row">
+                            <div class="form-group">
+                                <label for="companyName">Company Name</label>
+                                <input type="text" id="companyName" name="companyName" placeholder="e.g. Acme Corp">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyWebsite">Company Website <span class="required-star">*</span> <span class="label-hint">for logo link in PDF</span></label>
+                                <input type="url" id="companyWebsite" name="companyWebsite" placeholder="https://company.com">
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Brand Colors (full width) -->
+                        <div class="colors-section">
+                            <h3>Brand Colors</h3>
+                            <div class="colors-grid">
+                                <div class="color-picker-group">
+                                    <label for="colorPrimary">Primary</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorPrimary" name="colorPrimary" value="#4A3453">
+                                        <span class="hex-value" id="hexPrimary">#4A3453</span>
+                                    </div>
+                                    <small>Headers, backgrounds</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorSecondary">Secondary</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorSecondary" name="colorSecondary" value="#7B8BA3">
+                                        <span class="hex-value" id="hexSecondary">#7B8BA3</span>
+                                    </div>
+                                    <small>Accents, numbers</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorAccent">Accent 1</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorAccent" name="colorAccent" value="#B38B91">
+                                        <span class="hex-value" id="hexAccent">#B38B91</span>
+                                    </div>
+                                    <small>CTA stripe, highlights</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorAccent2">Accent 2</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorAccent2" name="colorAccent2" value="#8a9f4a">
+                                        <span class="hex-value" id="hexAccent2">#8a9f4a</span>
+                                    </div>
+                                    <small>Secondary accent, CTA text</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorAccent3">Accent 3</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorAccent3" name="colorAccent3" value="#5b8fa8">
+                                        <span class="hex-value" id="hexAccent3">#5B8FA8</span>
+                                    </div>
+                                    <small>Tertiary accent</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorTextDark">Text Dark</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorTextDark" name="colorTextDark" value="#333333">
+                                        <span class="hex-value" id="hexTextDark">#333333</span>
+                                    </div>
+                                    <small>Body text</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorTextLight">Text Light</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorTextLight" name="colorTextLight" value="#F9F8F6">
+                                        <span class="hex-value" id="hexTextLight">#F9F8F6</span>
+                                    </div>
+                                    <small>Light text on dark bg</small>
+                                </div>
+                                <div class="color-picker-group">
+                                    <label for="colorBorder">Border</label>
+                                    <div class="color-input-wrapper">
+                                        <input type="color" id="colorBorder" name="colorBorder" value="#A49A87">
+                                        <span class="hex-value" id="hexBorder">#A49A87</span>
+                                    </div>
+                                    <small>Dividers, borders</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Typography (full width) -->
+                        <div class="fonts-section">
+                            <h3>Typography</h3>
+                            <div class="fonts-grid">
+                                <div class="form-group">
+                                    <label for="fontTitle">Title Font</label>
+                                    <select id="fontTitle" name="fontTitle">
+                                        <option value="Poppins-Bold" selected>Poppins Bold</option>
+                                        <option value="Helvetica-Bold">Helvetica Bold</option>
+                                        <option value="Courier-Bold">Courier Bold</option>
+                                        <option value="Times-Roman-Bold">Times Roman Bold</option>
+                                        <option value="OpenSans-Bold">Open Sans Bold</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fontSubtitle">Subtitle Font</label>
+                                    <select id="fontSubtitle" name="fontSubtitle">
+                                        <option value="OpenSans" selected>Open Sans</option>
+                                        <option value="Poppins">Poppins</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Courier">Courier</option>
+                                        <option value="Times-Roman">Times Roman</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fontBody">Body Font</label>
+                                    <select id="fontBody" name="fontBody">
+                                        <option value="OpenSans" selected>Open Sans</option>
+                                        <option value="Poppins">Poppins</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Courier">Courier</option>
+                                        <option value="Times-Roman">Times Roman</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /#manualBrandingSection -->
+                </section>
+
+                <!-- Action Buttons -->
+                <section class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="generateBtn">
+                        <img src="/static/assets/sun.svg" class="btn-svg-icon" alt="">
+                        <span class="btn-text">Generate PDF</span>
+                    </button>
+                    <button type="button" class="btn btn-clear" id="clearFormBtn" title="Clear all form fields">
+                        <img src="/static/assets/shovel.svg" class="btn-svg-icon btn-svg-icon--dark" alt="">
+                        <span class="btn-text">Clear Form</span>
+                    </button>
+                </section>
+
+            </form>
+
+            <!-- Status/Results Section -->
+            <div id="statusSection" class="status-section hidden">
+                <div id="statusContent"></div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>briefly • <a href="https://github.com/nicole-os/mvpmm/" target="_blank" rel="noopener">MVPMM</a></p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Generating your PDF...</p>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

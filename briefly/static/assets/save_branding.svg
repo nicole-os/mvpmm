@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF">
+  <!-- Picture frame: outer rect + inner rect, fill-rule evenodd = thick border -->
+  <path fill-rule="evenodd" d="M2 2h20v20H2V2zm3 3v14h14V5H5z"/>
+  <!-- Leaf: pointed top, rounded bottom, centered in frame opening -->
+  <path d="M12 7.5c2 1 3.8 2.8 3.8 4.5 0 2.5-1.7 4.2-3.8 4.2-2.1 0-3.8-1.7-3.8-4.2 0-1.7 1.8-3.5 3.8-4.5z"/>
+</svg>

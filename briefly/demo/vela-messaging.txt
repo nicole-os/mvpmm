@@ -1,0 +1,105 @@
+VELA ANALYTICS — MESSAGING FRAMEWORK
+=====================================
+
+COMPANY OVERVIEW
+----------------
+Vela Analytics is a supply chain intelligence platform that helps mid-market
+manufacturers and distributors predict disruptions before they happen. By
+combining real-time supplier data with AI-driven risk modeling, Vela gives
+operations and procurement teams a single source of truth for the decisions
+that keep product moving.
+
+Founded in 2021. Headquartered in Austin, TX. Serving customers across
+industrial manufacturing, consumer goods, and specialty retail.
+
+
+ELEVATOR PITCH (SHORT)
+-----------------------
+Vela gives supply chain teams early warning when something is about to go
+wrong — before a missed shipment becomes a missed quarter.
+
+
+ELEVATOR PITCH (BODY / BOILERPLATE)
+-------------------------------------
+Vela Analytics helps operations teams cut through supply chain complexity
+with AI-powered risk signals and supplier visibility — so the right people
+get the right information in time to act, not just in time to explain.
+
+
+POSITIONING STATEMENT
+----------------------
+For operations and procurement leaders at mid-market manufacturers,
+Vela Analytics is the supply chain intelligence platform that turns
+fragmented supplier data into early warning signals — so teams can respond
+to risk before it becomes disruption.
+
+Unlike reactive ERP dashboards or manual spreadsheet tracking, Vela
+continuously monitors hundreds of risk signals across your supplier network
+and surfaces the ones that actually matter.
+
+
+TAGLINE OPTIONS
+---------------
+- "See around corners."
+- "Supply chain intelligence, not just visibility."
+- "From fragmented data to confident decisions."
+
+
+KEY MESSAGES
+------------
+1. EARLY WARNING, NOT JUST REPORTING
+   Vela surfaces supplier risk signals 2–4 weeks before they show up in
+   your ERP. That's enough time to qualify alternates, adjust production
+   schedules, or have a conversation with the supplier — not just file
+   an incident report.
+
+2. BUILT FOR THE TEAM IN THE MIDDLE
+   Procurement, operations, and logistics teams don't have data science
+   resources. Vela is designed for the people who need answers on Monday
+   morning, not a new analytics platform to maintain.
+
+3. WORKS WITH WHAT YOU ALREADY HAVE
+   Vela integrates with SAP, Oracle, NetSuite, and major EDI providers
+   in under two weeks. No rip-and-replace. No six-month implementation.
+
+4. TRUSTED DATA, EXPLAINABLE SIGNALS
+   Every risk flag in Vela links back to the underlying source — whether
+   that's a supplier financial filing, a port congestion index, or a
+   weather event. Your team sees the signal and the reason.
+
+
+PROOF POINTS
+------------
+- Customers report an average of 18 days of early warning before a
+  Tier 1 supplier disruption
+- 94% of users say Vela surfaces risks they would not have caught in
+  their existing systems
+- Average implementation time: 11 days
+- SOC 2 Type II certified
+
+
+COMPETITIVE DIFFERENTIATION
+-----------------------------
+vs. ERP supply chain modules: Real-time external risk data + AI signals,
+not just transactional history. Vela sees what your ERP can't.
+
+vs. Resilience360 / Resilinc: Vela focuses on mid-market buyers, not
+enterprise Fortune 500 programs. Faster to value, lower total cost.
+
+vs. Manual tracking / spreadsheets: Vela automates the work of 2–3 FTEs
+of supplier monitoring and converts it into actionable alerts.
+
+
+CUSTOMER CALL TO ACTION
+------------------------
+"Request a risk audit of your top 20 suppliers — free, no commitment."
+URL: https://velaanalytics.io/risk-audit
+
+
+BOILERPLATE
+Vela Analytics is a supply chain intelligence platform that helps
+mid-market manufacturers and distributors predict supplier disruptions
+before they impact operations. Vela surfaces AI-powered risk signals
+across the full supplier network, giving procurement and operations teams
+the early warning they need to act — not just react. Learn more at
+velaanalytics.io.

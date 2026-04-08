@@ -1,0 +1,21 @@
+{
+  "company_name": "Vela",
+  "company_website": "https://velaanalytics.io",
+  "colors": {
+    "primary": "#1B3A4B",
+    "secondary": "#3D7EAA",
+    "accent": "#E07A5F",
+    "accent2": "#81B29A",
+    "accent3": "#F2CC8F",
+    "text_dark": "#1C1C1E",
+    "text_light": "#F7F6F2",
+    "border": "#B5C4CB"
+  },
+  "fonts": {
+    "font_title": "Poppins-Bold",
+    "font_subtitle": "OpenSans",
+    "font_body": "OpenSans"
+  },
+  "header_style": "geometric",
+  "logo_bg_mode": "dark"
+}

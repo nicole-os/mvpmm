@@ -1,0 +1,17 @@
+{
+  "company_name": "Acme Corp",
+  "company_website": "https://acme.com",
+  "colors": {
+    "primary": "#2C3E50",
+    "secondary": "#3498DB",
+    "accent": "#E74C3C",
+    "text_dark": "#2C3E50",
+    "text_light": "#ECF0F1",
+    "border": "#95A5A6"
+  },
+  "fonts": {
+    "font_title": "Poppins-Bold",
+    "font_subtitle": "OpenSans",
+    "font_body": "OpenSans"
+  }
+}

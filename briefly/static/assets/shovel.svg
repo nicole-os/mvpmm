@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF">
+  <g transform="rotate(-40 12 12)">
+    <!-- T-grip at top of handle -->
+    <rect x="7" y="2" width="10" height="2.5" rx="1.25"/>
+    <!-- Shaft -->
+    <rect x="11" y="4.5" width="2" height="9.5"/>
+    <!-- Blade (spade shape: rounded top, pointed tip) -->
+    <path d="M7.5 14h9C16.5 14 17 14.5 17 15c0 3.31-2.24 6-5 6s-5-2.69-5-6c0-.5.5-1 .5-1z"/>
+  </g>
+</svg>
