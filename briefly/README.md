@@ -1,95 +1,75 @@
 # briefly
 
-**briefly** turns a company blog post into a branded, print-ready executive brief — a 2- or 3-page PDF formatted for sales enablement, investor updates, or content repurposing.
+Turn any blog post into a polished, print-ready PDF brief — in seconds.
 
-Paste a blog URL, upload your brand kit (logo, colors, messaging doc), and briefly scrapes the article, extracts the key points with GPT-4o, and generates a polished PDF in your brand.
+Paste a URL, upload your brand kit, and briefly extracts the key takeaways, FAQs, and summary, then lays it out in a branded 2-page or 3-page PDF you can share immediately.
 
----
-
-## What it generates
-
-**2-page brief**
-- Page 1: header with logo, exec summary, 3 key takeaway cards, optional FAQ
-- Page 2: deep-dive sections, read-more button, branded boilerplate block
-
-**3-page brief**
-- Page 1: header with logo, subtitle, exec summary
-- Page 2: introduction, takeaway cards, 2 content sections
-- Page 3: remaining sections, FAQ box, branded boilerplate block
-
-Both templates support full custom branding: colors, fonts, logo, company name, website, and boilerplate copy. Save your brand config as JSON and reload it any time.
+Built with FastAPI, ReportLab, and GPT-4o.
 
 ---
 
-## Setup
-
-**Requirements:** Python 3.10+, an OpenAI API key
+## Quickstart
 
 ```bash
-git clone https://github.com/nicole-os/mvpmm.git
+git clone https://github.com/nicole-os/mvpmm
 cd mvpmm/briefly
-
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-cp .env.example .env               # then add your OpenAI key
-python run.py
+bash setup.sh
 ```
 
-Open [http://localhost:8003](http://localhost:8003)
+The setup script handles everything: pip dependencies, the Playwright browser binary, and a `.env` template. Open `.env` and add your OpenAI API key, then:
+
+```bash
+python3 run.py
+```
+
+Open `http://localhost:8003`.
 
 ---
 
-## Environment variables
+## Manual setup (if you prefer)
 
+### 1. Install dependencies
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+### 2. Install Playwright browser ⚠️ required — separate from pip
+```bash
+python3 -m playwright install chromium
+```
+> `pip install` only installs the Python library. The browser binary is a separate download.
+> Skipping this step will cause briefly to fail on JS-rendered pages.
+
+### 3. Add your OpenAI API key
 ```
 OPENAI_API_KEY=sk-...
-LLM_MODEL=gpt-4o        # optional, defaults to gpt-4o
 ```
 
-You can use any model supported by [litellm](https://docs.litellm.ai) — Claude, Gemini, local Ollama, etc.
-
----
-
-## How to use
-
-1. Paste a blog post URL
-2. Upload your company logo (PNG or JPG)
-3. Optionally upload brand documents (PDF, DOCX, TXT) — messaging docs, pitch decks, one-pagers. briefly uses these to extract your boilerplate copy and CTA verbatim.
-4. Set your brand colors and fonts
-5. Choose 2-page or 3-page layout
-6. Click **Generate Brief**
-
-Use **Save Branding** to export your config as JSON. Load it next time to skip the setup.
-
-A demo brand kit (Vela Analytics) is included in the `demo/` folder to try without your own assets.
+### 4. Run
+```bash
+python3 run.py
+```
 
 ---
 
 ## Features
 
-- **Font-aware layout:** All text wrapping uses actual PDF font metrics — no character-count guessing. Long titles, unusual fonts, and edge-case content all lay out correctly.
-- **Smart boilerplate extraction:** Finds your "About" paragraph in uploaded brand docs and copies it word-for-word into the PDF footer block. Falls back to LLM synthesis if no boilerplate is found.
-- **Logo background detection:** Automatically detects whether your logo needs a dark or light background based on pixel brightness analysis. Override manually if needed.
-- **Geometric header patterns:** 2-page briefs support solid, geometric, or surprise header texture overlays — deterministic per article so the same post always gets the same pattern.
-- **Brand JSON save/load:** Full brand config (colors, fonts, logo path, company info) serializes to JSON for reuse.
+- **Scrapes any blog URL** — handles static pages and JS-rendered sites (via Playwright)
+- **LLM extraction** — GPT-4o pulls title, subtitle, summary, takeaways, and FAQs
+- **Two templates** — 2-page (with pull quote) and 3-page (full layout)
+- **Custom branding** — upload your logo, pick colors, load/save brand JSON
+- **Clean PDF output** — ReportLab canvas, Poppins + Open Sans, press-ready
 
 ---
 
-## Stack
+## Requirements
 
-- **Backend:** Python, FastAPI, ReportLab, litellm, pypdf, python-docx, BeautifulSoup
-- **Frontend:** Vanilla JS SPA, no build step
-- **LLM:** OpenAI gpt-4o by default (configurable)
-- **PDF:** ReportLab canvas — no LaTeX, no headless browser
-
----
-
-## Part of the mvpmm toolkit
-
-briefly is one tool in a set of open-source PMM utilities at [github.com/nicole-os/mvpmm](https://github.com/nicole-os/mvpmm). Each tool is standalone and runs locally.
+- Python 3.10+
+- OpenAI API key (GPT-4o)
+- Chromium (installed via `python3 -m playwright install chromium`)
 
 ---
 
-*Built by Nicole Scott https://www.linkedin.com/in/nicolescottfromraleigh/*
+## License
+
+MIT — see LICENSE file.

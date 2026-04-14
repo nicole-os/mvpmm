@@ -10,6 +10,9 @@ aiohttp>=3.9.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 
+# JS-rendered page fallback (after pip install, also run: python3 -m playwright install chromium)
+playwright>=1.40.0
+
 # PDF Generation
 reportlab>=4.0.0
 

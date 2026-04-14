@@ -137,7 +137,18 @@ async def _fetch_with_playwright(url: str) -> tuple[str, str]:
     Handles JS rendering, Cloudflare Bot Fight Mode, and similar bot-blocking.
     Returns (html, final_url).
     """
-    from playwright.async_api import async_playwright
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        raise RuntimeError(
+            "Playwright is not installed. Run: pip install playwright && python3 -m playwright install chromium"
+        )
+
+    # Also check that the browser binary is installed
+    try:
+        import playwright._impl._driver as _driver  # noqa: F401
+    except Exception:
+        pass
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)

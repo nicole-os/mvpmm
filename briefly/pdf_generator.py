@@ -1399,10 +1399,11 @@ def _render_page_header(c, title, subtitle, brand: BrandConfig):
     subtitle_y = ty - title_sub_gap
     c.setFont(_font("OpenSans"), subtitle_sz)
     c.setFillColor(_hex_to_color(header_text_color))
-    sub_max   = max(10, int((W * 0.72) / (subtitle_sz * 0.52)))
-    sub_lines = _wrap(subtitle, sub_max)[:1]
+    sub_avail_w = W - MARGIN - logo_w_header - 0.5 * inch
+    sub_lines   = _wrap_by_width(subtitle, sub_avail_w, _font("OpenSans"), subtitle_sz)[:2]
     if subtitle and sub_lines:
-        c.drawString(MARGIN, subtitle_y, sub_lines[0])
+        for i, ln in enumerate(sub_lines):
+            c.drawString(MARGIN, subtitle_y - i * subtitle_lead, ln)
 
     return header_y
 
