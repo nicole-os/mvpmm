@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pitchplanner — AI-powered media pitch generator</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=10">
+</head>
+<body>
+
+<header class="app-header">
+    <div>
+        <h1>pitchplanner <span class="tagline">— AI-powered media pitch generator</span></h1>
+    </div>
+</header>
+
+<div class="app-body">
+
+    <!-- Input Panel -->
+    <div class="input-panel">
+        <h2>What are you pitching?</h2>
+        <div class="input-grid">
+
+            <div class="field-group">
+                <label>News / Announcement</label>
+                <span class="hint">Upload the announcement, press release, survey data, research report, partnership details — anything describing what happened.</span>
+                <div class="upload-zone" id="news-zone">
+                    <input type="file" id="news-files" multiple accept=".pdf,.docx,.doc,.txt,.md">
+                    <div class="upload-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg></div>
+                    <div class="upload-label"><strong>Click to upload</strong> or drag files here</div>
+                    <div class="upload-label" style="font-size:0.7rem; margin-top:4px;">PDF, DOCX, TXT — one or many</div>
+                </div>
+                <div class="file-list" id="news-file-list"></div>
+            </div>
+
+            <div class="field-group">
+                <label>Brand &amp; Messaging Docs</label>
+                <span class="hint">Upload your messaging guide, sales deck, positioning doc, or any doc describing your brand voice and product.</span>
+                <div class="upload-zone" id="brand-zone">
+                    <input type="file" id="brand-files" multiple accept=".pdf,.docx,.doc,.txt,.md">
+                    <div class="upload-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+                    <div class="upload-label"><strong>Click to upload</strong> or drag files here</div>
+                    <div class="upload-label" style="font-size:0.7rem; margin-top:4px;">PDF, DOCX, TXT — one or many</div>
+                </div>
+                <div class="file-list" id="brand-file-list"></div>
+            </div>
+
+            <div class="field-group full-width">
+                <label>Additional Context <span style="font-weight:400; text-transform:none; font-size:0.75rem; color:#888;">(optional)</span></label>
+                <span class="hint">Paste any extra notes here: goals for this PR push, target audience, embargo date, marketing motions, events, etc.</span>
+                <textarea id="extra-context" rows="3" placeholder="e.g. 'Targeting CISOs at mid-market financial firms. We have exclusive data we can offer to one outlet. Embargo lifts April 14, wire goes live April 15.'"></textarea>
+            </div>
+
+            <div class="field-group full-width press-release-meta-row">
+                <div class="press-meta-col">
+                    <label>Company City <span style="font-weight:400; text-transform:none; font-size:0.75rem; color:#888;">(optional)</span></label>
+                    <input type="text" id="company-city" placeholder="e.g. San Francisco, CA">
+                    <span class="hint">Used for press release dateline.</span>
+                </div>
+                <div class="press-meta-col">
+                    <label>Media Contact <span style="font-weight:400; text-transform:none; font-size:0.75rem; color:#888;">(optional)</span></label>
+                    <input type="text" id="media-contact-name" placeholder="Name, Title">
+                    <input type="text" id="media-contact-email" placeholder="email@company.com" style="margin-top:4px;">
+                </div>
+            </div>
+
+            <div class="field-group full-width tier-date-row">
+                <div class="tier-date-col">
+                    <label>Publication Tier</label>
+                    <div class="tier-selector">
+                        <button class="tier-btn" data-tier="1">Tier 1 only<span>Top-tier trade press</span></button>
+                        <button class="tier-btn active" data-tier="2">Tier 1 + 2<span>All publications</span></button>
+                    </div>
+                </div>
+                <div class="tier-date-col">
+                    <label>Launch / Announcement Date <span style="font-weight:400; text-transform:none; font-size:0.75rem; color:#888;">(optional)</span></label>
+                    <input type="date" id="launch-date" placeholder="YYYY-MM-DD">
+                    <span class="hint">Used to calculate calendar dates for outreach and follow-up.</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Publication Library — lives inside the input panel, collapses with it -->
+        <div class="pub-library-section" id="pub-library-section">
+            <div class="pub-library-section-header" onclick="app.togglePubLibrary()">
+                <span class="pub-library-section-title">Publication Library</span>
+                <span class="pub-library-section-sub">The outlets pitchplanner pitches to. Edit before running analysis to add or remove targets.</span>
+                <span class="pub-library-chevron" id="pub-library-chevron">▼</span>
+            </div>
+            <div class="pub-library-section-body" id="pub-library-section-body" style="display:none;">
+                <div id="publications-list"></div>
+            </div>
+        </div>
+
+        <span class="status-msg" id="status-msg"></span>
+    </div>
+
+    <!-- Phase progress header — hidden until analyze completes -->
+    <div class="phase-header" id="phase-header" style="display:none;">
+        <span class="phase-header-title" id="phase-title">Select your targets</span>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="results-section">
+
+        <!-- Stats bar -->
+        <div class="stats-bar" id="stats-bar"></div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="app.switchTab('assessment')">News Assessment</button>
+            <button class="tab-btn" onclick="app.switchTab('targets')">Campaign Design</button>
+        </div>
+
+        <!-- Tab: News Assessment -->
+        <div class="tab-panel active" id="tab-assessment">
+            <div id="assessment-content"></div>
+        </div>
+
+        <!-- Tab: Campaign Waves -->
+        <div class="tab-panel" id="tab-targets">
+            <div class="section-header" id="waves-tab-header">Campaign Waves</div>
+            <div class="section-sub" id="waves-tab-sub">After analysis, select which publications to pitch in each wave, then click "Build Campaign" to scrape their articles and draft personalized pitches.</div>
+            <div class="targets-list" id="targets-list"></div>
+            <div id="selection-count-msg" style="display:none;"></div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Persistent bottom navigator — always visible -->
+<div class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-steps">
+        <span class="bnav-step active" id="bnav-step-1" onclick="app.navTo(1)">
+            <span class="bnav-num">1</span> Input
+        </span>
+        <span class="bnav-sep">›</span>
+        <span class="bnav-step" id="bnav-step-2" onclick="app.navTo(2)">
+            <span class="bnav-num">2</span> Design
+        </span>
+        <span class="bnav-sep">›</span>
+        <span class="bnav-step" id="bnav-step-3" onclick="app.navTo(3)">
+            <span class="bnav-num">3</span> Deploy
+        </span>
+    </div>
+    <div class="bottom-nav-status" id="bnav-status"></div>
+    <div class="bottom-nav-actions">
+        <button class="btn-secondary btn-nav-export" id="bnav-export-btn" onclick="app.exportDocx()" style="display:none;">
+            Export to Word
+        </button>
+        <button class="btn-primary btn-nav-action" id="bnav-action-btn" onclick="app.navAction()">
+            Analyze &amp; Find Targets →
+        </button>
+    </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
